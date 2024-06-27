@@ -5,18 +5,18 @@ using Pomelo.EntityFrameworkCore.MySql.Scaffolding.Internal;
 
 namespace Level5Backend.Models;
 
-public partial class Level5DbContext : DbContext
+public partial class Level5Context : DbContext
 {
-    public Level5DbContext()
+    public Level5Context()
     {
     }
 
-    public Level5DbContext(DbContextOptions<Level5DbContext> options)
+    public Level5Context(DbContextOptions<Level5Context> options)
         : base(options)
     {
     }
 
-    public virtual DbSet<Application> Applications { get; set; }
+    public virtual DbSet<Application> Application { get; set; }
 
     public virtual DbSet<Highscore> Highscores { get; set; }
 
