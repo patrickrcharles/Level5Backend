@@ -11,7 +11,7 @@ namespace level5Server.Controllers
 {
     [Route("api/application")]
     [ApiController]
-    public class ApplicationController : Controller
+    public class ApplicationController : ControllerBase
     {
         private readonly Level5Context _context;
         public ApplicationController(Level5Context context)

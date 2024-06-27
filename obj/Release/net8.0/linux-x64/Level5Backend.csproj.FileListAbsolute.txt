@@ -423,3 +423,9 @@ C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\obj\Release\net8.0\lin
 C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\obj\Release\net8.0\linux-x64\Level5Backend.pdb
 C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\obj\Release\net8.0\linux-x64\Level5Backend.genruntimeconfig.cache
 C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\obj\Release\net8.0\linux-x64\ref\Level5Backend.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\obj\Release\net8.0\linux-x64\Level5Backend.sourcelink.json
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.IdentityModel.Abstractions.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.IdentityModel.JsonWebTokens.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.IdentityModel.Logging.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.IdentityModel.Tokens.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\System.IdentityModel.Tokens.Jwt.dll
