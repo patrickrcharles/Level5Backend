@@ -14,6 +14,10 @@ namespace level5Server.Controllers
     public class ApplicationController : ControllerBase
     {
         private readonly Level5Context _context;
+        private static readonly string[] Summaries = new[]
+{
+            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+        };
         public ApplicationController(Level5Context context)
         {
             _context = context;
@@ -25,10 +29,12 @@ namespace level5Server.Controllers
         /// Get all application versions
         /// </summary>
         [HttpGet("version")]
-        public async Task<ActionResult<IEnumerable<Application>>> GetAllVersions()
+        public IEnumerable<String> GetAllVersions()
         {
-            return await _context.Application.OrderByDescending(x => x.Id)
-                .ToListAsync();
+
+            //return await _context.Application.OrderByDescending(x => x.Id)
+            //    .ToListAsync();
+            return Summaries;
         }
 
         //--------------------- HTTP GET ---------------------------------------------------

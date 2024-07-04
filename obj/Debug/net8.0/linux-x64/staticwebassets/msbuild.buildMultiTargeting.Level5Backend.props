@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\Level5Backend.props" />
+</Project>

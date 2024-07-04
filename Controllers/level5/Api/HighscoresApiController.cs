@@ -5,9 +5,10 @@ using Level5Backend.Models;
 namespace level5Server.Models.level5.Api
 {
     //[Authorize]
+    //[ApiController]
     [Route("api/highscores")]
-    [ApiController]
-    public class HighscoresApiController : Controller
+    
+    public class HighscoresApiController : ControllerBase
     {
         private readonly Level5Context _context;
 
@@ -22,10 +23,9 @@ namespace level5Server.Models.level5.Api
         /// Get all high scores
         /// </summary>
         //[Authorize]
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Highscore>>> GetAllHighscores()
+        [HttpGet(Name = "GetHighScores")]
+        public async Task<IEnumerable<Highscore>> GetAllHighscores()
         {
-
             //ModePlayedCount(16);
             //return await _context.Highscores.OrderByDescending(x => x.Id)
             //    .ToListAsync();

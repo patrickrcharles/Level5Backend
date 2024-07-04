@@ -429,3 +429,10 @@ C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\lin
 C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.IdentityModel.Logging.dll
 C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.IdentityModel.Tokens.dll
 C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.AspNetCore.Mvc.Versioning.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.IdentityModel.Protocols.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\System.Configuration.ConfigurationManager.dll
+C:\Users\Patrick\source\repos\Level5Backend\Level5Backend\bin\Release\net8.0\linux-x64\System.Security.Cryptography.ProtectedData.dll
