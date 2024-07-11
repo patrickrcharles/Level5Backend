@@ -29,12 +29,11 @@ namespace level5Server.Controllers
         /// Get all application versions
         /// </summary>
         [HttpGet("version")]
-        public IEnumerable<String> GetAllVersions()
+        public async Task<IEnumerable<object>> GetAllVersionsAsync()
         {
-
-            //return await _context.Application.OrderByDescending(x => x.Id)
-            //    .ToListAsync();
-            return Summaries;
+            return await _context.Application.OrderByDescending(x => x.Id)
+                .ToListAsync();
+            //return Summaries;
         }
 
         //--------------------- HTTP GET ---------------------------------------------------
@@ -76,7 +75,7 @@ namespace level5Server.Controllers
                 _context.Application.Add(application);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetAllVersions), new { id = application.Id }, application);
+                return CreatedAtAction(nameof(GetAllVersionsAsync), new { id = application.Id }, application);
             }
         }
 
