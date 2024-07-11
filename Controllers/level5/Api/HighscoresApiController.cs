@@ -7,7 +7,7 @@ namespace level5Server.Models.level5.Api
     //[Authorize]
     //[ApiController]
     [Route("api/highscores")]
-    
+
     public class HighscoresApiController : ControllerBase
     {
         private readonly Level5Context _context;
@@ -117,7 +117,7 @@ namespace level5Server.Models.level5.Api
         {
             ActionResult<IEnumerable<Object>> list = null;
             // totalpoints highscore
-            if (modeid == 1 || (modeid > 14 && modeid < 20) || modeid ==23 || modeid == 24 || modeid == 26)
+            if (modeid == 1 || (modeid > 14 && modeid < 20) || modeid == 23 || modeid == 24 || modeid == 26)
             {
                 var highscores = await _context.Highscores
                     .Where(x => x.Modeid == modeid
@@ -571,6 +571,48 @@ namespace level5Server.Models.level5.Api
 
             return NoContent();
         }
+        //--------------------- HTTP POST Unsubmitted Highscores ---------------------------------------------------
+        // POST: api/Highscores
+        /// <summary>
+        /// Create new high score
+        /// </summary>
+        [HttpPost]
+        [Route("unsubmitted")]
+        public async Task<ActionResult<List<Highscore>>> PostUnSubmittedHighscore([FromBody]List<Highscore> highscores)
+        {
+            foreach (var highscore in highscores)
+            {
+                Console.WriteLine(highscore.Date);
+
+                //// check if unique scoreid already exists in database
+                //if (_context.Highscores.Where(e => e.Scoreid == highscore.Scoreid).Any())
+                //{
+                //    //System.Diagnostics.Debug.WriteLine("-------------------scoreid already exists in database");
+                //    return Conflict();
+                //    //thrownewHttpResponseException(HttpStatusCode.NotFound);
+                //    //return Content(codeNotDefined, "message to be sent in response body");
+                //}
+                ////_context.Users.Where(e => e.Userid == highscore.Userid).Any();
+                //// if empty Username  or userid NOT in user table
+                //if (string.IsNullOrEmpty(highscore.Username) || !_context.Users.Where(e => e.Userid == highscore.Userid).Any())
+                //{
+                //    return BadRequest();
+                //}
+                //else
+                //{
+                    updateModeName(highscore);
+                    _context.Highscores.Add(highscore);
+                    //CreatedAtAction("unsubmitted highscores", new { id = highscore.Id }, highscore);
+                    Console.WriteLine("unsubmitted : " + highscore.ToString());
+                //}
+            }
+            await _context.SaveChangesAsync();
+            // update serverstats
+            //ServerStatsController server = new ServerStatsController(_context);
+            //server.getServerStats();
+            List<Highscore> list = new List<Highscore>();
+            return list;
+        }
 
         //--------------------- HTTP POST Highscore ---------------------------------------------------
         // POST: api/Highscores
@@ -578,33 +620,34 @@ namespace level5Server.Models.level5.Api
         /// Create new high score
         /// </summary>
         [HttpPost]
-        public async Task<ActionResult<Highscore>> PostHighscore(Highscore highscores)
+        public async Task<ActionResult<Highscore>> PostHighscore([FromBody] Highscore highscore)
         {
+            System.Diagnostics.Debug.WriteLine("-------------------highscore.Scoreid : "+ highscore.Scoreid);
             // check if unique scoreid already exists in database
-            if (_context.Highscores.Where(e => e.Scoreid == highscores.Scoreid).Any())
+            if (_context.Highscores.Where(e => e.Scoreid == highscore.Scoreid).Any())
             {
                 //System.Diagnostics.Debug.WriteLine("-------------------scoreid already exists in database");
                 return Conflict();
                 //thrownewHttpResponseException(HttpStatusCode.NotFound);
                 //return Content(codeNotDefined, "message to be sent in response body");
             }
-            //_context.Users.Where(e => e.Userid == highscores.Userid).Any();
+            //_context.Users.Where(e => e.Userid == highscore.Userid).Any();
             // if empty Username  or userid NOT in user table
-            if (string.IsNullOrEmpty(highscores.Username) || !_context.Users.Where(e => e.Userid == highscores.Userid).Any())
+            if (string.IsNullOrEmpty(highscore.Username) || !_context.Users.Where(e => e.Userid == highscore.Userid).Any())
             {
                 return BadRequest();
             }
             else
             {
-                updateModeName(highscores);
-                _context.Highscores.Add(highscores);
+                updateModeName(highscore);
+                _context.Highscores.Add(highscore);
                 await _context.SaveChangesAsync();
 
                 // update serverstats
                 ServerStatsController server = new ServerStatsController(_context);
                 server.getServerStats();
 
-                return CreatedAtAction(nameof(GetAllHighscores), new { id = highscores.Id }, highscores);
+                return CreatedAtAction(nameof(GetAllHighscores), new { id = highscore.Id }, highscore);
             }
         }
 
