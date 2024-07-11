@@ -1,4 +1,5 @@
 using Level5Backend.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -14,14 +15,33 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<Level5Context>(options =>
 options.UseMySql(_connectionString, ServerVersion.AutoDetect(_connectionString)));
-var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+builder.Services.AddCors(options => options.AddPolicy("ApiCorsPolicy", builder =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    builder.WithOrigins("http://localhost:5173").AllowAnyMethod().AllowAnyHeader();
+}));
+
+builder.Services.AddMvc();
+
+var app = builder.Build();
+app.UseSwagger();
+app.UseSwaggerUI();
+//// Configure the HTTP request pipeline.
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseSwagger();
+//    //app.UseSwaggerUI();
+//    app.UseSwaggerUI(c =>
+//                {
+//                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Level 5");
+//                    //c.RoutePrefix = "/swagger/v1/ui";
+//                });
+//}
+
+app.UseCors(builder => builder
+     .AllowAnyOrigin()
+     .AllowAnyMethod()
+     .AllowAnyHeader());
 
 app.UseHttpsRedirection();
 
