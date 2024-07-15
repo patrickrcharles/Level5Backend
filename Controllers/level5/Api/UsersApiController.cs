@@ -4,11 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Level5Backend.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace level5Server.Models.level5
 {
+    [EnableCors("ApiCors")]
     [Route("api/users")]
     [ApiController]
     public class UsersApiController : Controller

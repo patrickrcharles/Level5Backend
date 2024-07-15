@@ -6,9 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Level5Backend.Models;
+using Microsoft.AspNetCore.Cors;
 
 namespace level5Server.Controllers
 {
+    [EnableCors("ApiCors")]
     [Route("api/application")]
     [ApiController]
     public class ApplicationController : ControllerBase

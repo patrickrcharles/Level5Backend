@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Level5Backend.Models;
+using Microsoft.AspNetCore.Cors;
 
 namespace level5Server.Models.level5.Api
 {
     //[Authorize]
     //[ApiController]
+    [EnableCors("ApiCors")]
     [Route("api/highscores")]
 
     public class HighscoresApiController : ControllerBase
@@ -23,6 +25,7 @@ namespace level5Server.Models.level5.Api
         /// Get all high scores
         /// </summary>
         //[Authorize]
+        [EnableCors("ApiCors")]
         [HttpGet(Name = "GetHighScores")]
         public async Task<IEnumerable<Highscore>> GetAllHighscores()
         {
@@ -41,6 +44,8 @@ namespace level5Server.Models.level5.Api
         /// <summary>
         /// Get high scores by platfoem. [handheld, desktop]
         /// </summary>
+        /// 
+        [EnableCors("ApiCors")]
         [HttpGet("platform/{platform}")]
         public async Task<ActionResult<IEnumerable<Highscore>>> GetHighScoreByPlatform(string platform)
         {
@@ -576,6 +581,8 @@ namespace level5Server.Models.level5.Api
         /// <summary>
         /// Create new high score
         /// </summary>
+        /// 
+        [EnableCors("ApiCors")]
         [HttpPost]
         [Route("unsubmitted")]
         public async Task<ActionResult<List<Highscore>>> PostUnSubmittedHighscore([FromBody]List<Highscore> highscores)

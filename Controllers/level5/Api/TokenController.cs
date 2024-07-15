@@ -11,9 +11,11 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Level5Backend.Models;
+using Microsoft.AspNetCore.Cors;
 
 namespace level5Server.Controllers.level5.Api
 {
+    [EnableCors("ApiCors")]
     [Route("api/token")]
     [ApiExplorerSettings(IgnoreApi = true)]
     [ApiController]
