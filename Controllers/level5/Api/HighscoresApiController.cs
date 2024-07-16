@@ -2,11 +2,12 @@
 using Microsoft.EntityFrameworkCore;
 using Level5Backend.Models;
 using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Authorization;
 
 namespace level5Server.Models.level5.Api
 {
     //[Authorize]
-    //[ApiController]
+    [ApiController]
     [EnableCors("ApiCors")]
     [Route("api/highscores")]
 
@@ -585,39 +586,42 @@ namespace level5Server.Models.level5.Api
         [EnableCors("ApiCors")]
         [HttpPost]
         [Route("unsubmitted")]
-        public async Task<ActionResult<List<Highscore>>> PostUnSubmittedHighscore([FromBody]List<Highscore> highscores)
+        public async Task<ActionResult<List<Highscore>>> PostUnSubmittedHighscore([FromBody] List<Highscore> highscores)
         {
+            if (highscores == null) { return BadRequest(); }
+            List<Highscore> list = new List<Highscore>();
+
             foreach (var highscore in highscores)
             {
                 Console.WriteLine(highscore.Date);
 
-                //// check if unique scoreid already exists in database
-                //if (_context.Highscores.Where(e => e.Scoreid == highscore.Scoreid).Any())
-                //{
-                //    //System.Diagnostics.Debug.WriteLine("-------------------scoreid already exists in database");
-                //    return Conflict();
-                //    //thrownewHttpResponseException(HttpStatusCode.NotFound);
-                //    //return Content(codeNotDefined, "message to be sent in response body");
-                //}
-                ////_context.Users.Where(e => e.Userid == highscore.Userid).Any();
-                //// if empty Username  or userid NOT in user table
-                //if (string.IsNullOrEmpty(highscore.Username) || !_context.Users.Where(e => e.Userid == highscore.Userid).Any())
-                //{
-                //    return BadRequest();
-                //}
-                //else
-                //{
+                // check if unique scoreid already exists in database
+                if (_context.Highscores.Where(e => e.Scoreid == highscore.Scoreid).Any())
+                {
+                    //System.Diagnostics.Debug.WriteLine("-------------------scoreid already exists in database");
+                    break;
+                    //thrownewHttpResponseException(HttpStatusCode.NotFound);
+                    //return Content(codeNotDefined, "message to be sent in response body");
+                }
+                //_context.Users.Where(e => e.Userid == highscore.Userid).Any();
+                // if empty Username  or userid NOT in user table
+                if (string.IsNullOrEmpty(highscore.Username) || !_context.Users.Where(e => e.Userid == highscore.Userid).Any())
+                {
+                    break;
+                }
+                else
+                {
                     updateModeName(highscore);
                     _context.Highscores.Add(highscore);
+                    list.Add(highscore);
                     //CreatedAtAction("unsubmitted highscores", new { id = highscore.Id }, highscore);
                     Console.WriteLine("unsubmitted : " + highscore.ToString());
-                //}
+                }
             }
             await _context.SaveChangesAsync();
             // update serverstats
             //ServerStatsController server = new ServerStatsController(_context);
             //server.getServerStats();
-            List<Highscore> list = new List<Highscore>();
             return list;
         }
 
@@ -629,7 +633,7 @@ namespace level5Server.Models.level5.Api
         [HttpPost]
         public async Task<ActionResult<Highscore>> PostHighscore([FromBody] Highscore highscore)
         {
-            System.Diagnostics.Debug.WriteLine("-------------------highscore.Scoreid : "+ highscore.Scoreid);
+            System.Diagnostics.Debug.WriteLine("-------------------highscore.Scoreid : " + highscore.Scoreid);
             // check if unique scoreid already exists in database
             if (_context.Highscores.Where(e => e.Scoreid == highscore.Scoreid).Any())
             {
