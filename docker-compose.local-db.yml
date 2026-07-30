@@ -1,0 +1,18 @@
+# Local-only Postgres instance for testing the MySQL -> Postgres migration.
+# Not part of the deployed stack - the Dockerfile builds the API image separately.
+# Usage: docker compose -f docker-compose.local-db.yml up -d
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: level5-postgres-local
+    environment:
+      POSTGRES_DB: level5
+      POSTGRES_USER: level5
+      POSTGRES_PASSWORD: localdevpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - level5-postgres-local-data:/var/lib/postgresql
+
+volumes:
+  level5-postgres-local-data:

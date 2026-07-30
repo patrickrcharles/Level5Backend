@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
-using Pomelo.EntityFrameworkCore.MySql.Scaffolding.Internal;
 
 namespace Level5Backend.Models;
 
@@ -28,23 +27,32 @@ public partial class Level5Context : DbContext
 
     public virtual DbSet<UserReport> UserReports { get; set; }
 
+    // The app always constructs this context via DI (see Program.cs's AddDbContext call), which already
+    // supplies configured options - so this fallback only matters for design-time tooling (e.g. running
+    // "dotnet ef migrations add" directly). It reads from an environment variable rather than a literal
+    // so a real connection string is never committed to source.
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseMySql("server=level5db.ctnfhe6sfb4k.us-east-2.rds.amazonaws.com;user id=admin;pwd=GREENelk93;database=level5;persistsecurityinfo=True;convert zero datetime=True", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.0.35-mysql"));
+    {
+        if (optionsBuilder.IsConfigured)
+        {
+            return;
+        }
+
+        string connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+            ?? throw new InvalidOperationException("Set the ConnectionStrings__DefaultConnection environment variable to run EF Core design-time tooling against this context.");
+
+        optionsBuilder.UseNpgsql(connectionString);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder
-            .UseCollation("utf8mb4_0900_ai_ci")
-            .HasCharSet("utf8mb4");
-
         modelBuilder.Entity<Application>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PRIMARY");
+            entity.HasKey(e => e.Id);
 
             entity.ToTable("Application");
 
-            entity.HasIndex(e => e.CurrentVersion, "currentVersion_UNIQUE").IsUnique();
+            entity.HasIndex(e => e.CurrentVersion).IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CurrentVersion)
@@ -54,11 +62,11 @@ public partial class Level5Context : DbContext
 
         modelBuilder.Entity<Highscore>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PRIMARY");
+            entity.HasKey(e => e.Id);
 
             entity.ToTable("highscores");
 
-            entity.HasIndex(e => e.Scoreid, "scoreid_UNIQUE").IsUnique();
+            entity.HasIndex(e => e.Scoreid).IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.BonusPoints).HasColumnName("bonusPoints");
@@ -161,7 +169,7 @@ public partial class Level5Context : DbContext
 
         modelBuilder.Entity<ServerMessage>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PRIMARY");
+            entity.HasKey(e => e.Id);
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Date)
@@ -174,9 +182,12 @@ public partial class Level5Context : DbContext
 
         modelBuilder.Entity<ServerStat>(entity =>
         {
-            entity.HasNoKey();
-
-            entity.HasIndex(e => e.Id, "id_UNIQUE").IsUnique();
+            // Id is an auto-increment identity column (see ValueGeneratedOnAdd below) - it was
+            // scaffolded as a keyless entity only because the original MySQL table had a unique
+            // index instead of an explicit PRIMARY KEY constraint. Without a real key, EF Core's
+            // change tracker can't track/insert instances (ServerStatsController.getServerStats
+            // relies on being able to Add() new rows), so this needs to be a proper key.
+            entity.HasKey(e => e.Id);
 
             entity.Property(e => e.Id)
                 .ValueGeneratedOnAdd()
@@ -190,13 +201,13 @@ public partial class Level5Context : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Userid).HasName("PRIMARY");
+            entity.HasKey(e => e.Userid);
 
             entity.ToTable("users");
 
-            entity.HasIndex(e => e.Userid, "iduser_UNIQUE").IsUnique();
+            entity.HasIndex(e => e.Userid).IsUnique();
 
-            entity.HasIndex(e => e.Username, "username_UNIQUE").IsUnique();
+            entity.HasIndex(e => e.Username).IsUnique();
 
             entity.Property(e => e.Userid).HasColumnName("userid");
             entity.Property(e => e.Email)
@@ -216,7 +227,7 @@ public partial class Level5Context : DbContext
                 .HasMaxLength(45)
                 .HasColumnName("lastname");
             entity.Property(e => e.Password)
-                .HasMaxLength(45)
+                .HasMaxLength(255)
                 .HasColumnName("password");
             entity.Property(e => e.Signupdate)
                 .HasMaxLength(45)
@@ -228,15 +239,14 @@ public partial class Level5Context : DbContext
 
         modelBuilder.Entity<UserReport>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PRIMARY");
+            entity.HasKey(e => e.Id);
 
             entity.ToTable("UserReport");
 
-            entity.HasIndex(e => e.Id, "id_UNIQUE").IsUnique();
+            entity.HasIndex(e => e.Id).IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Date)
-                .HasColumnType("datetime")
                 .HasColumnName("date");
             entity.Property(e => e.Device)
                 .HasMaxLength(45)
