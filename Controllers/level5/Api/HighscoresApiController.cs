@@ -21,19 +21,21 @@ namespace level5Server.Models.level5.Api
         }
 
         //--------------------- HTTP GET ---------------------------------------------------
-        // GET: /api/highscores
+        // GET: /api/highscores?page=0&results=50
         /// <summary>
-        /// Get all high scores
+        /// Get all high scores, paginated (defaults to the first 50, capped at 200 per page).
         /// </summary>
-        //[Authorize]
         [EnableCors("ApiCors")]
         [HttpGet(Name = "GetHighScores")]
-        public async Task<IEnumerable<Highscore>> GetAllHighscores()
+        public async Task<IEnumerable<Highscore>> GetAllHighscores(int page = 0, int results = 50)
         {
-            //ModePlayedCount(16);
-            //return await _context.Highscores.OrderByDescending(x => x.Id)
-            //    .ToListAsync();
-            var highscores = await _context.Highscores.OrderByDescending(x => x.Id)
+            int take = Math.Clamp(results, 1, 200);
+            int skip = Math.Max(page, 0) * take;
+
+            var highscores = await _context.Highscores.AsNoTracking()
+                 .OrderByDescending(x => x.Id)
+                 .Skip(skip)
+                 .Take(take)
                  .ToListAsync();
             HideHighScoreDetails(highscores);
 
@@ -50,15 +52,11 @@ namespace level5Server.Models.level5.Api
         [HttpGet("platform/{platform}")]
         public async Task<ActionResult<IEnumerable<Highscore>>> GetHighScoreByPlatform(string platform)
         {
-            var highscores = await _context.Highscores.Where(x => x.Platform == platform)
+            var highscores = await _context.Highscores.AsNoTracking()
+                .Where(x => x.Platform == platform)
                 .OrderByDescending(x => x.Id)
                 .ToListAsync();
             HideHighScoreDetails(highscores);
-
-            if (highscores == null)
-            {
-                return NotFound();
-            }
 
             return highscores;
         }
@@ -71,16 +69,12 @@ namespace level5Server.Models.level5.Api
         [HttpGet("modeid/{modeid}/userid/{userid}")]
         public async Task<ActionResult<IEnumerable<Highscore>>> GetHighScoreByModeIdUserId(int modeid, int userid)
         {
-            var highscores = await _context.Highscores.Where(x => x.Modeid == modeid && x.Userid == userid)
+            var highscores = await _context.Highscores.AsNoTracking()
+                .Where(x => x.Modeid == modeid && x.Userid == userid)
                 .OrderByDescending(x => x.Id)
                 .ToListAsync();
 
             HideHighScoreDetails(highscores);
-
-            if (highscores == null)
-            {
-                return NotFound();
-            }
 
             return highscores;
         }
@@ -92,17 +86,12 @@ namespace level5Server.Models.level5.Api
         [HttpGet("modeid/{modeid}/platform/{platform}")]
         public async Task<ActionResult<IEnumerable<Highscore>>> GetHighScoreByModeIdPlatform(int modeid, string platform)
         {
-            var highscores = await _context.Highscores.Where(x => x.Platform == platform)
+            var highscores = await _context.Highscores.AsNoTracking()
+                .Where(x => x.Modeid == modeid && x.Platform == platform)
                 .OrderByDescending(x => x.Id)
                 .ToListAsync();
 
             HideHighScoreDetails(highscores);
-
-            if (highscores == null)
-            {
-                return NotFound();
-            }
-
 
             return highscores;
         }
@@ -282,7 +271,6 @@ namespace level5Server.Models.level5.Api
             // enemies killed highscore
             if (modeid == 20 || modeid == 21 || modeid == 22)
             {
-                var Usernames = await _context.Users.Select(x => new { x.Userid, x.Username }).ToListAsync();
                 var highscores = (dynamic)null;
                 if (hardcore == 0)
                 {
@@ -499,7 +487,6 @@ namespace level5Server.Models.level5.Api
             // enemies killed highscore
             if (modeid == 20 || modeid == 21 || modeid == 22)
             {
-                var Usernames = await _context.Users.Select(x => new { x.Userid, x.Username }).ToListAsync();
 
                 var highscores = await _context.Highscores
                     .Where(x => x.Modeid == modeid)
@@ -537,20 +524,18 @@ namespace level5Server.Models.level5.Api
         /// <summary>
         /// Insert high score or replace if already exists
         /// </summary>
+        [Authorize]
         [HttpPut("scoreid/{scoreid}")]
         public async Task<IActionResult> PutHighscore(string scoreid, Highscore highscores)
         {
-            System.Diagnostics.Debug.WriteLine("----- scoreid : " + scoreid);
-            System.Diagnostics.Debug.WriteLine("----- highscores.Scoreid : " + highscores.Scoreid);
-            //highscores.Id = GetDatabaseIdByScoreId(scoreid);
-
-            System.Diagnostics.Debug.WriteLine("----- highscores.Id : " + highscores.Id);
-
             if (scoreid != highscores.Scoreid)
             {
-                System.Diagnostics.Debug.WriteLine("----- SERVER : BAD REQUEST : \n" +
-                    scoreid + " NOT EQUAL to " + highscores.Scoreid);
                 return BadRequest();
+            }
+
+            if (!TryGetCallerUserid(out int callerUserid) || highscores.Userid != callerUserid)
+            {
+                return Forbid();
             }
 
             _context.Entry(highscores).State = EntityState.Modified;
@@ -558,15 +543,11 @@ namespace level5Server.Models.level5.Api
             try
             {
                 await _context.SaveChangesAsync();
-                System.Diagnostics.Debug.WriteLine("----- SERVER : scoreid modified : " + scoreid);
             }
-            catch (DbUpdateConcurrencyException e)
+            catch (DbUpdateConcurrencyException)
             {
-                System.Diagnostics.Debug.WriteLine("----- SERVER : ERROR : " + e);
-                //System.Diagnostics.Debug.WriteLine("----- SERVER : scoreid not found : " + scoreid);
                 if (!ScoreIdExists(scoreid))
                 {
-                    System.Diagnostics.Debug.WriteLine("----- SERVER : scoreid not found : " + scoreid);
                     return NotFound();
                 }
                 else
@@ -583,45 +564,47 @@ namespace level5Server.Models.level5.Api
         /// Create new high score
         /// </summary>
         /// 
+        [Authorize]
         [EnableCors("ApiCors")]
         [HttpPost]
         [Route("unsubmitted")]
         public async Task<ActionResult<List<Highscore>>> PostUnSubmittedHighscore([FromBody] List<Highscore> highscores)
         {
             if (highscores == null) { return BadRequest(); }
+
+            if (!TryGetCallerUserid(out int callerUserid) || !await _context.Users.AnyAsync(u => u.Userid == callerUserid))
+            {
+                return Forbid();
+            }
+
+            // one batched lookup instead of two queries per item (was N+1 before)
+            var incomingScoreIds = highscores.Select(h => h.Scoreid).ToList();
+            var existingScoreIds = (await _context.Highscores
+                .Where(e => incomingScoreIds.Contains(e.Scoreid))
+                .Select(e => e.Scoreid)
+                .ToListAsync())
+                .ToHashSet();
+
             List<Highscore> list = new List<Highscore>();
 
             foreach (var highscore in highscores)
             {
-                Console.WriteLine(highscore.Date);
+                // skip (not abort) anything that's a duplicate, missing a username, or doesn't
+                // belong to the authenticated caller - one bad item shouldn't drop the rest of
+                // the batch, which is what the previous "break" did.
+                if (existingScoreIds.Contains(highscore.Scoreid)
+                    || string.IsNullOrEmpty(highscore.Username)
+                    || highscore.Userid != callerUserid)
+                {
+                    continue;
+                }
 
-                // check if unique scoreid already exists in database
-                if (_context.Highscores.Where(e => e.Scoreid == highscore.Scoreid).Any())
-                {
-                    //System.Diagnostics.Debug.WriteLine("-------------------scoreid already exists in database");
-                    break;
-                    //thrownewHttpResponseException(HttpStatusCode.NotFound);
-                    //return Content(codeNotDefined, "message to be sent in response body");
-                }
-                //_context.Users.Where(e => e.Userid == highscore.Userid).Any();
-                // if empty Username  or userid NOT in user table
-                if (string.IsNullOrEmpty(highscore.Username) || !_context.Users.Where(e => e.Userid == highscore.Userid).Any())
-                {
-                    break;
-                }
-                else
-                {
-                    updateModeName(highscore);
-                    _context.Highscores.Add(highscore);
-                    list.Add(highscore);
-                    //CreatedAtAction("unsubmitted highscores", new { id = highscore.Id }, highscore);
-                    Console.WriteLine("unsubmitted : " + highscore.ToString());
-                }
+                updateModeName(highscore);
+                _context.Highscores.Add(highscore);
+                list.Add(highscore);
             }
+
             await _context.SaveChangesAsync();
-            // update serverstats
-            //ServerStatsController server = new ServerStatsController(_context);
-            //server.getServerStats();
             return list;
         }
 
@@ -630,42 +613,42 @@ namespace level5Server.Models.level5.Api
         /// <summary>
         /// Create new high score
         /// </summary>
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<Highscore>> PostHighscore([FromBody] Highscore highscore)
         {
-            System.Diagnostics.Debug.WriteLine("-------------------highscore.Scoreid : " + highscore.Scoreid);
-            // check if unique scoreid already exists in database
-            if (_context.Highscores.Where(e => e.Scoreid == highscore.Scoreid).Any())
+            if (!TryGetCallerUserid(out int callerUserid) || highscore.Userid != callerUserid)
             {
-                //System.Diagnostics.Debug.WriteLine("-------------------scoreid already exists in database");
-                return Conflict();
-                //thrownewHttpResponseException(HttpStatusCode.NotFound);
-                //return Content(codeNotDefined, "message to be sent in response body");
+                return Forbid();
             }
-            //_context.Users.Where(e => e.Userid == highscore.Userid).Any();
-            // if empty Username  or userid NOT in user table
-            if (string.IsNullOrEmpty(highscore.Username) || !_context.Users.Where(e => e.Userid == highscore.Userid).Any())
+
+            // check if unique scoreid already exists in database
+            if (await _context.Highscores.AnyAsync(e => e.Scoreid == highscore.Scoreid))
+            {
+                return Conflict();
+            }
+            // if empty Username or userid NOT in user table
+            if (string.IsNullOrEmpty(highscore.Username) || !await _context.Users.AnyAsync(e => e.Userid == highscore.Userid))
             {
                 return BadRequest();
             }
-            else
-            {
-                updateModeName(highscore);
-                _context.Highscores.Add(highscore);
-                await _context.SaveChangesAsync();
 
-                // update serverstats
-                ServerStatsController server = new ServerStatsController(_context);
-                server.getServerStats();
+            updateModeName(highscore);
+            _context.Highscores.Add(highscore);
+            await _context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetAllHighscores), new { id = highscore.Id }, highscore);
-            }
+            // update serverstats
+            ServerStatsController server = new ServerStatsController(_context);
+            server.getServerStats();
+
+            return CreatedAtAction(nameof(GetAllHighscores), new { id = highscore.Id }, highscore);
         }
 
         //--------------------- HTTP DELETE HighScore ---------------------------------------------------
         /// <summary>
         /// Delete high score by score id
         /// </summary>
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<ActionResult<Highscore>> DeleteHighscore(int id)
         {
@@ -673,6 +656,11 @@ namespace level5Server.Models.level5.Api
             if (highscores == null)
             {
                 return NotFound();
+            }
+
+            if (!TryGetCallerUserid(out int callerUserid) || highscores.Userid != callerUserid)
+            {
+                return Forbid();
             }
 
             _context.Highscores.Remove(highscores);
@@ -703,6 +691,14 @@ namespace level5Server.Models.level5.Api
         private bool PlatformExists(string platform)
         {
             return _context.Highscores.Any(e => e.Platform == platform);
+        }
+
+        // the JWT issued by TokenController carries the authenticated user's id as a "Userid"
+        // claim - mutating endpoints use this to confirm the caller owns the score being touched.
+        private bool TryGetCallerUserid(out int userid)
+        {
+            var claim = User.FindFirst("Userid")?.Value;
+            return int.TryParse(claim, out userid);
         }
 
         //public bool isDev(string Username)

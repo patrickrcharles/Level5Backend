@@ -1,8 +1,9 @@
-﻿
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Level5Backend.Models;
+using level5Server.Controllers.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -32,11 +33,12 @@ namespace level5Server.Models.level5
         [HttpGet]
         public async Task<ActionResult<IEnumerable<User>>> GetAllUsers()
         {
-            foreach(User u in _context.Users)
+            var users = await _context.Users.AsNoTracking().ToListAsync();
+            foreach (User u in users)
             {
                 HideUserDetails(u);
             }
-            return await _context.Users.ToListAsync();
+            return users;
         }
 
 
@@ -51,67 +53,39 @@ namespace level5Server.Models.level5
         // get user by user id
         public async Task<ActionResult<User>> GetUserById(int userid)
         {
-            if (!UserIdExists(userid))
+            var user = await _context.Users.AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Userid == userid);
+            if (user == null)
             {
                 return NotFound();
             }
 
-            try
-            {
-                var users = await _context.Users
-                    .FirstOrDefaultAsync(m => m.Userid == userid);
-                if (users == null)
-                {
-                    return null;
-                }
+            HideUserDetails(user);
 
-                HideUserDetails(users);
-
-                return users;
-            }
-            catch (DbUpdateConcurrencyException e)
-            {
-                System.Diagnostics.Debug.WriteLine("----- SERVER : DbUpdateConcurrencyException : " + e);
-                return BadRequest();
-            }
+            return user;
         }
 
         //--------------------- HTTP GET Username ---------------------------------------------------
         // GET: /api/users/username/{userid}
         /// <summary>
-        /// Get user by username
+        /// Get user by username. Used pre-login (looking a user up by name happens before the
+        /// caller has a token), so this intentionally stays anonymous - but the password (and
+        /// other sensitive fields) must never be part of the response.
         /// </summary>
-        //[Authorize]
         [ApiExplorerSettings(IgnoreApi = true)]
         [HttpGet("username/{username}")]
-        // GET: Users by userid
-        // get user by user id
         public async Task<ActionResult<User>> GetUserByUsername(string username)
         {
-            if (username == null)
-            {
-                return null;
-            }
-            if (!UserNameExists(username))
+            var user = await _context.Users.AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Username == username);
+            if (user == null)
             {
                 return NotFound();
             }
-            else
-            {
-                try
-                {
-                    var user = await _context.Users
-                        .FirstOrDefaultAsync(m => m.Username == username);
-                    //HideUserDetails(user);
 
-                    return user;
-                }
-                catch (DbUpdateConcurrencyException e)
-                {
-                    System.Diagnostics.Debug.WriteLine("----- SERVER : DbUpdateConcurrencyException : " + e);
-                    return BadRequest();
-                }
-            }
+            HideUserDetails(user);
+
+            return user;
         }
 
         //--------------------- HTTP GET Username ---------------------------------------------------
@@ -124,31 +98,16 @@ namespace level5Server.Models.level5
         [HttpGet("email/{email}")]
         public async Task<ActionResult<User>> GetUserByEmail(string email)
         {
-            if (email == null)
-            {
-                return null;
-            }
-            if (!UserNameExists(email))
+            var user = await _context.Users.AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Email == email);
+            if (user == null)
             {
                 return NotFound();
             }
-            else
-            {
-                try
-                {
-                    var user = await _context.Users
-                        .FirstOrDefaultAsync(m => m.Email == email);
 
-                    HideUserDetails(user);
+            HideUserDetails(user);
 
-                    return user;
-                }
-                catch (DbUpdateConcurrencyException e)
-                {
-                    System.Diagnostics.Debug.WriteLine("----- SERVER : DbUpdateConcurrencyException : " + e);
-                    return BadRequest();
-                }
-            }
+            return user;
         }
 
         //--------------------- HTTP PUT ---------------------------------------------------
@@ -165,13 +124,21 @@ namespace level5Server.Models.level5
                 return BadRequest();
             }
 
+            if (!CallerOwnsUserid(id))
+            {
+                return Forbid();
+            }
+
             _context.Entry(user).State = EntityState.Modified;
+            // callers only ever intend to update profile fields - never let a PUT body silently
+            // overwrite the password hash with whatever plaintext string happened to be in it.
+            _context.Entry(user).Property(u => u.Password).IsModified = false;
 
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException e)
+            catch (DbUpdateConcurrencyException)
             {
                 if (!UserIdExists(id))
                 {
@@ -188,9 +155,8 @@ namespace level5Server.Models.level5
         //--------------------- HTTP POST ---------------------------------------------------
         // POST: api/Highscores
         /// <summary>
-        /// Create new user
+        /// Create new user. Registration is inherently anonymous - there's no token to require yet.
         /// </summary>
-        //[Authorize]
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(User user)
         {
@@ -199,18 +165,13 @@ namespace level5Server.Models.level5
                 return BadRequest();
             }
 
-            try
-            {
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
+            user.Password = PasswordHashing.Hash(user.Password);
 
-                return CreatedAtAction(nameof(GetAllUsers), new { id = user.Userid }, user);
-            }
-            catch (DbUpdateConcurrencyException e)
-            {
-                System.Diagnostics.Debug.WriteLine("----- SERVER : DbUpdateConcurrencyException : " + e);
-                return BadRequest();
-            }
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            HideUserDetails(user);
+            return CreatedAtAction(nameof(GetUserById), new { userid = user.Userid }, user);
         }
 
         //--------------------- HTTP DELETE ---------------------------------------------------
@@ -222,6 +183,11 @@ namespace level5Server.Models.level5
         [HttpDelete("{id}")]
         public async Task<ActionResult<User>> DeleteUser(int id)
         {
+            if (!CallerOwnsUserid(id))
+            {
+                return Forbid();
+            }
+
             var user = await _context.Users.FindAsync(id);
             if (user == null)
             {
@@ -243,6 +209,14 @@ namespace level5Server.Models.level5
         private bool UserNameExists(string username)
         {
             return _context.Users.Any(e => e.Username == username);
+        }
+
+        // the JWT issued by TokenController carries the authenticated user's id as a "Userid"
+        // claim - mutating/deleting endpoints must confirm the caller matches the target account.
+        private bool CallerOwnsUserid(int id)
+        {
+            var claim = User.FindFirst("Userid")?.Value;
+            return int.TryParse(claim, out int callerUserid) && callerUserid == id;
         }
 
         private static void HideUserDetails(User users)

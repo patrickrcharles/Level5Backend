@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using level5Server.Controllers.Utility;
 using level5Server.Models;
 using level5Server.Models.level5;
 using System;
@@ -45,7 +46,10 @@ namespace level5Server.Controllers.level5.Api
                     var claims = new[] {
                     new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"]),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()),
+                    // "iat" is a registered NumericDate claim (RFC 7519) - it must be serialized as a
+                    // JSON number, not the human-readable date string this used to produce, or newer
+                    // JWT parsers reject the token outright while reading it.
+                    new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
                     new Claim("Userid",user.Userid.ToString()),
                     new Claim("Firstname", user.Firstname.ToString()),
                     new Claim("Lastname", user.Lastname.ToString()),
@@ -72,9 +76,17 @@ namespace level5Server.Controllers.level5.Api
             }
         }
 
-        private async Task<User> GetUser(string username, string password)
+        private async Task<User?> GetUser(string username, string password)
         {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Username == username && u.Password == password);
+            // Password is a PBKDF2 hash (see PasswordHashing/UsersApiController.PostUser) - it is
+            // never compared with == against the raw submitted password.
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null || !PasswordHashing.Verify(user.Password, password))
+            {
+                return null;
+            }
+
+            return user;
         }
     }
 }
