@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using level5Server.Models;
 using level5Server.Models.level5;
@@ -44,13 +45,17 @@ namespace level5Server.Controllers
         /// Get current application versions
         /// </summary>
         [HttpGet("version/current")]
-        public ActionResult<object> GetCurrentVersion()
+        public async Task<ActionResult<object>> GetCurrentVersion()
         {
-            var version = _context.Application
+            var version = await _context.Application
                 .OrderByDescending(x => x.Id)
                 .Select(x => x.CurrentVersion)
-                .ToList()
-                .First();
+                .FirstOrDefaultAsync();
+
+            if (version == null)
+            {
+                return NotFound();
+            }
 
             return version;
         }
@@ -60,6 +65,7 @@ namespace level5Server.Controllers
         /// <summary>
         /// Add new application version
         /// </summary>
+        [Authorize(Policy = "RequireDev")]
         [Route("version")]
         [ApiExplorerSettings(IgnoreApi = true)]
         [HttpPost]

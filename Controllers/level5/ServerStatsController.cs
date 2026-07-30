@@ -1,17 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using level5Server.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Level5Backend.Models;
 
 namespace level5Server.Models.level5
 {
-
-    [Route("[controller]")]
-    public class ServerStatsController : Controller
+    // Not an HTTP-facing controller - it has no views (the admin MVC panel this once served was
+    // removed) and no route. HighscoresApiController.PostHighscore uses it as a plain stats
+    // recorder after each score submission.
+    public class ServerStatsController
     {
         public List<MostConsective> MostConsecutiveShotsUsernameList;
         public List<string> MostPlayedCharactersList;
@@ -60,25 +59,6 @@ namespace level5Server.Models.level5
             _context = context;
         }
 
-        [HttpGet]
-        [ApiExplorerSettings(IgnoreApi = true)]
-        public async Task<IActionResult> Index()
-        {
-            //ServerStats serverStats = new ServerStats();
-            //getMostPlayedCharacter(serverStats);
-            //getMostConsecutivesShotsList(serverStats);
-            //getPlayedLevelList(serverStats);
-            //getLongestShotList(serverStats);
-
-            //ViewBag.MostConsecutiveShotsUsernameList = MostConsecutiveShotsUsernameList;
-            //ViewBag.MostPlayedCharactersList = MostPlayedCharactersList;
-            //ViewBag.MostPlayedLevelList = MostPlayedLevelList;
-            //ViewBag.LongestShotList = LongestShotList;
-
-            return View(await _context.ServerStats.ToListAsync());
-        }
-
-        [ApiExplorerSettings(IgnoreApi = true)]
         public void getServerStats()
         {
 

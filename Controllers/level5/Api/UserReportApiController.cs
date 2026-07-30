@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using level5Server.Models;
 using level5Server.Models.level5;
@@ -31,7 +32,7 @@ namespace level5Server.Controllers.level5.Api
         /// <summary>
         /// Get all users in database
         /// </summary>
-        //[Authorize]
+        [Authorize(Policy = "RequireDev")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserReport>>> GetAllReports()
         {

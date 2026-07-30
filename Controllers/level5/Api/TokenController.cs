@@ -51,6 +51,8 @@ namespace level5Server.Controllers.level5.Api
                     // JWT parsers reject the token outright while reading it.
                     new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
                     new Claim("Userid",user.Userid.ToString()),
+                    // gates the "RequireDev" authorization policy used by the remaining admin-only endpoints
+                    new Claim("IsDev", (user.Isdev == 1).ToString().ToLowerInvariant()),
                     new Claim("Firstname", user.Firstname.ToString()),
                     new Claim("Lastname", user.Lastname.ToString()),
                     new Claim("username", user.Username.ToString()),

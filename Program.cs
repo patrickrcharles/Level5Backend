@@ -38,7 +38,10 @@ builder.Services.AddCors(options =>
                       });
 });
 
-builder.Services.AddControllers();
+// AddControllers() alone only registers API (non-view) support; ChangeLog/Builds/Info/Links
+// call View(...), which needs the full MVC view pipeline (including TempData) that only
+// AddControllersWithViews() registers.
+builder.Services.AddControllersWithViews();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -64,6 +67,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
     };
+});
+
+// Used by the remaining admin-only endpoints (UserReportApiController.GetAllReports,
+// ApplicationController.PostHighscore). There's no roles system in this app, but User.Isdev
+// already exists for exactly this purpose - TokenController puts it on the JWT as a claim.
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireDev", policy => policy.RequireClaim("IsDev", "true"));
 });
 
 var app = builder.Build();
