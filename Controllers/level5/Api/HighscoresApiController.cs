@@ -98,7 +98,7 @@ namespace level5Server.Models.level5.Api
 
         // Which stat a mode id is ranked by. Centralizes the mode-id groupings that used to be
         // duplicated across the Filtered/All endpoints below (they were kept in exact sync by hand);
-        // updateModeName's per-modeid display-name switch is a separate, legitimately 1:1 lookup
+        // applyHighscoreDefaults's per-modeid display-name switch is a separate, legitimately 1:1 lookup
         // (several modeids sharing a metric still get distinct display names) so it isn't folded in.
         private enum ScoreMetric { TotalPoints, MaxShotMade, TotalDistance, Time, ConsecutiveShots, EnemiesKilled }
 
@@ -390,7 +390,7 @@ namespace level5Server.Models.level5.Api
             // If the client's PUT body omits modeName (not every caller round-trips every field),
             // this backfills it from Modeid instead of silently overwriting the existing value
             // with null - EntityState.Modified below writes every property as-is.
-            updateModeName(highscores);
+            applyHighscoreDefaults(highscores);
 
             _context.Entry(highscores).State = EntityState.Modified;
 
@@ -456,7 +456,7 @@ namespace level5Server.Models.level5.Api
 
                 // server-derived, never trust whatever the client put in the request body
                 highscore.Ipaddress = callerIp;
-                updateModeName(highscore);
+                applyHighscoreDefaults(highscore);
                 _context.Highscores.Add(highscore);
                 list.Add(highscore);
             }
@@ -493,7 +493,7 @@ namespace level5Server.Models.level5.Api
             // server-derived, never trust whatever the client put in the request body
             highscore.Ipaddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
-            updateModeName(highscore);
+            applyHighscoreDefaults(highscore);
             _context.Highscores.Add(highscore);
             await _context.SaveChangesAsync();
 
@@ -578,7 +578,7 @@ namespace level5Server.Models.level5.Api
             return count;
         }
 
-        private void updateModeName(Highscore highscores)
+        private void applyHighscoreDefaults(Highscore highscores)
         {
             // if modename is null, insert based on modeid
             if (String.IsNullOrEmpty(highscores.ModeName))
@@ -683,6 +683,8 @@ namespace level5Server.Models.level5.Api
             {
                 highscores.SniperModeName = "none";
             }
+
+            highscores.Difficulty ??= 1;
         }
 
         private static void HideHighScoreDetails(List<Highscore> highscores)

@@ -48,7 +48,12 @@ public partial class Highscore
     [Required, StringLength(45)]
     public string Date { get; set; } = null!;
 
-    public int Difficulty { get; set; }
+    // Nullable so omitting it can be told apart from explicitly sending 0 - the DB column defaults
+    // this to 1, but EF always writes an explicit value on insert (it doesn't fall back to SQL
+    // defaults for values it's given), so a plain non-nullable int would have silently stored 0
+    // for any client that left this out, instead of the intended default. updateModeName backfills
+    // it the same way it already does for ModeName/SniperModeName.
+    public int? Difficulty { get; set; }
 
     public float Time { get; set; }
 
