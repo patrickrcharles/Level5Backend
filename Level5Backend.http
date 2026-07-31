@@ -1,6 +1,6 @@
 @Level5Backend_HostAddress = http://localhost:5124
 
-GET {{Level5Backend_HostAddress}}/weatherforecast/
+GET {{Level5Backend_HostAddress}}/health
 Accept: application/json
 
 ###

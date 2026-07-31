@@ -27,15 +27,17 @@ if (string.IsNullOrEmpty(builder.Configuration["Jwt:Key"]))
     throw new InvalidOperationException("Jwt:Key is not configured. Set it via user-secrets (local dev) or the Jwt__Key environment variable (production).");
 }
 
-// add CORS 
+// add CORS
+// No live site to target yet - allow any localhost/127.0.0.1 origin regardless of port so this
+// works against whatever port a local frontend dev server happens to be running on. Once there's
+// a real deployed frontend, replace this with WithOrigins("https://<real-domain>").
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins,
                       policy =>
                       {
-                          policy.WithOrigins("http://sweatthis.com",
-                                              "http://www.sweatthis.com",
-                                              "http://api.sweatthis.com").
+                          policy.SetIsOriginAllowed(origin =>
+                                    Uri.TryCreate(origin, UriKind.Absolute, out var uri) && uri.IsLoopback).
                                               AllowAnyHeader().
                                               AllowAnyMethod();
                       });
