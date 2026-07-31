@@ -1,26 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 
 namespace Level5Backend.Models;
 
-// TokenController.Post is the only place this entity is still bound directly from a request body
-// (registration/profile-edit went through UserRegisterDto/UserUpdateDto instead) - Username and
-// Password are the only fields it actually reads, so those are the only ones annotated here.
-// Adding [Required] to Email/Firstname/Lastname would risk 400ing a login payload that doesn't
-// happen to include them, for fields the login flow never looks at.
+// Not bound directly from a request body anywhere (registration/profile-edit go through
+// UserRegisterDto/UserUpdateDto, login through UserLoginDto) - so no validation attributes here.
+// Login used to bind this entity directly; Email's non-nullability meant it was implicitly
+// required by ASP.NET Core's model validation (this project has <Nullable>enable</Nullable>) even
+// though login never uses it, 400ing any login payload that didn't happen to include an email.
 public partial class User
 {
     public int Userid { get; set; }
 
-    [Required, StringLength(45)]
     public string Username { get; set; } = null!;
 
     public string? Firstname { get; set; }
 
     public string? Lastname { get; set; }
 
-    [Required]
     public string Password { get; set; } = null!;
 
     public string Email { get; set; } = null!;

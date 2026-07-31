@@ -12,6 +12,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Level5Backend.Models;
+using Level5Backend.Models.Dto;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -36,49 +37,40 @@ namespace level5Server.Controllers.level5.Api
         /// </summary>
         [EnableRateLimiting("LoginPolicy")]
         [HttpPost]
-        public async Task<ActionResult> Post(User _userData)
+        public async Task<ActionResult> Post(UserLoginDto _userData)
         {
-            if (_userData != null && _userData.Username != null && _userData.Password != null)
+            var user = await GetUser(_userData.Username, _userData.Password);
+
+            if (user == null)
             {
-                var user = await GetUser(_userData.Username, _userData.Password);
-
-                if (user != null)
-                {
-                    //create claims details based on the user information
-                    var claims = new[] {
-                    new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"] ?? string.Empty),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    // "iat" is a registered NumericDate claim (RFC 7519) - it must be serialized as a
-                    // JSON number, not the human-readable date string this used to produce, or newer
-                    // JWT parsers reject the token outright while reading it.
-                    new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
-                    new Claim("Userid",user.Userid.ToString()),
-                    // gates the "RequireDev" authorization policy used by the remaining admin-only endpoints
-                    new Claim("IsDev", (user.Isdev == 1).ToString().ToLowerInvariant()),
-                    new Claim("Firstname", user.Firstname ?? string.Empty),
-                    new Claim("Lastname", user.Lastname ?? string.Empty),
-                    new Claim("username", user.Username),
-                    new Claim( "email", user.Email)
-                   };
-
-                    // Jwt:Key is validated non-empty at startup (see Program.cs), so it's never null here.
-                    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
-
-                    var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-                    var token = new JwtSecurityToken(_configuration["Jwt:Issuer"], _configuration["Jwt:Audience"], claims, expires: DateTime.UtcNow.AddDays(1), signingCredentials: signIn);
-
-                    return Ok(new JwtSecurityTokenHandler().WriteToken(token));
-                }
-                else
-                {
-                    return BadRequest("Invalid credentials");
-                }
+                return BadRequest("Invalid credentials");
             }
-            else
-            {
-                return BadRequest();
-            }
+
+            //create claims details based on the user information
+            var claims = new[] {
+                new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"] ?? string.Empty),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                // "iat" is a registered NumericDate claim (RFC 7519) - it must be serialized as a
+                // JSON number, not the human-readable date string this used to produce, or newer
+                // JWT parsers reject the token outright while reading it.
+                new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+                new Claim("Userid",user.Userid.ToString()),
+                // gates the "RequireDev" authorization policy used by the remaining admin-only endpoints
+                new Claim("IsDev", (user.Isdev == 1).ToString().ToLowerInvariant()),
+                new Claim("Firstname", user.Firstname ?? string.Empty),
+                new Claim("Lastname", user.Lastname ?? string.Empty),
+                new Claim("username", user.Username),
+                new Claim( "email", user.Email)
+               };
+
+            // Jwt:Key is validated non-empty at startup (see Program.cs), so it's never null here.
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+
+            var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(_configuration["Jwt:Issuer"], _configuration["Jwt:Audience"], claims, expires: DateTime.UtcNow.AddDays(1), signingCredentials: signIn);
+
+            return Ok(new JwtSecurityTokenHandler().WriteToken(token));
         }
 
         private async Task<User?> GetUser(string username, string password)

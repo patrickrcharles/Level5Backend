@@ -50,6 +50,20 @@ namespace level5Server.Controllers.level5.Api
         [HttpPost]
         public async Task<ActionResult<User>> PostUserReport(UserReport userReport)
         {
+            // Deliberately not [Authorize] - reports may legitimately come in before login (e.g. a
+            // crash report). But when a valid token IS present, trust it over whatever Userid/
+            // UserName the client put in the body - those fields aren't otherwise verified against
+            // the caller at all.
+            if (TryGetCallerUserid(out int callerUserid))
+            {
+                userReport.Userid = callerUserid;
+                userReport.UserName = User.FindFirst("username")?.Value ?? userReport.UserName;
+            }
+
+            // server-derived, never trust whatever the client put in the request body - same as
+            // Highscore.Ipaddress
+            userReport.Ipaddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
             // empty text
             if (String.IsNullOrEmpty(userReport.Report))
             {
@@ -69,9 +83,12 @@ namespace level5Server.Controllers.level5.Api
 
                 return CreatedAtAction(nameof(GetAllReports), new { id = userReport.Id }, userReport);
             }
-            catch (DbUpdateConcurrencyException e)
+            catch (DbUpdateException e)
             {
-                _logger.LogWarning(e, "Failed to save user report due to a concurrency conflict");
+                // DbUpdateException, not DbUpdateConcurrencyException - UserReport has no
+                // concurrency token configured, so a plain insert can never throw the latter; this
+                // was catching an exception type that could never actually be raised here.
+                _logger.LogWarning(e, "Failed to save user report");
                 return BadRequest();
             }
         }
@@ -82,6 +99,14 @@ namespace level5Server.Controllers.level5.Api
         private async Task<bool> ReportTextExistsAsync(int userid, string report)
         {
             return await _context.UserReports.AnyAsync(e => e.Userid == userid && e.Report == report);
+        }
+
+        // the JWT issued by TokenController carries the authenticated user's id as a "Userid"
+        // claim - false here just means no valid token was presented, not an error.
+        private bool TryGetCallerUserid(out int userid)
+        {
+            var claim = User.FindFirst("Userid")?.Value;
+            return int.TryParse(claim, out userid);
         }
     }
 }

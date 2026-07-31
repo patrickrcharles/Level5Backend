@@ -21,7 +21,10 @@ public partial class UserReport
 
     public string Version { get; set; } = null!;
 
-    public string Ipaddress { get; set; } = null!;
+    // Nullable/server-derived (see UserReportApiController.PostUserReport) rather than trusted
+    // from the client, like Highscore.Ipaddress - this used to be a NOT NULL, client-supplied
+    // column, which meant a client that didn't happen to send one couldn't submit a report at all.
+    public string? Ipaddress { get; set; }
 
     public DateTime Date { get; set; }
 }
