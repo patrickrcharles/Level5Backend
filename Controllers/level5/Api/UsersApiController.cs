@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Level5Backend.Models;
+using Level5Backend.Models.Dto;
 using level5Server.Controllers.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
@@ -115,40 +116,30 @@ namespace level5Server.Models.level5
         /// <summary>
         /// Update user data
         /// </summary>
+        // Binds a UserUpdateDto rather than the User entity - Isdev (which grants the RequireDev
+        // authorization policy) and Password must never be settable by a profile-edit request.
         [Authorize]
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(int id, User user)
+        public async Task<IActionResult> PutUser(int id, UserUpdateDto dto)
         {
-            if (id != user.Userid)
-            {
-                return BadRequest();
-            }
-
             if (!CallerOwnsUserid(id))
             {
                 return Forbid();
             }
 
-            _context.Entry(user).State = EntityState.Modified;
-            // callers only ever intend to update profile fields - never let a PUT body silently
-            // overwrite the password hash with whatever plaintext string happened to be in it.
-            _context.Entry(user).Property(u => u.Password).IsModified = false;
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserIdExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            user.Username = dto.Username;
+            user.Email = dto.Email;
+            user.Firstname = dto.Firstname;
+            user.Lastname = dto.Lastname;
+
+            await _context.SaveChangesAsync();
+
             return NoContent();
         }
 
@@ -157,15 +148,26 @@ namespace level5Server.Models.level5
         /// <summary>
         /// Create new user. Registration is inherently anonymous - there's no token to require yet.
         /// </summary>
+        // Binds a UserRegisterDto rather than the User entity - Isdev must never be settable at
+        // signup either, or any account could self-grant the RequireDev authorization policy.
         [HttpPost]
-        public async Task<ActionResult<User>> PostUser(User user)
+        public async Task<ActionResult<User>> PostUser(UserRegisterDto dto)
         {
-            if (UserNameExists(user.Username))
+            if (UserNameExists(dto.Username))
             {
                 return BadRequest();
             }
 
-            user.Password = PasswordHashing.Hash(user.Password);
+            var user = new User
+            {
+                Username = dto.Username,
+                Password = PasswordHashing.Hash(dto.Password),
+                Email = dto.Email,
+                Firstname = dto.Firstname,
+                Lastname = dto.Lastname,
+                Ipaddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Signupdate = DateTime.UtcNow.ToString("o"),
+            };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -201,11 +203,6 @@ namespace level5Server.Models.level5
         }
 
         //--------------------- UTILITY FUNCTIONS ---------------------------------------------------
-        private bool UserIdExists(int id)
-        {
-            return _context.Users.Any(e => e.Userid == id);
-        }
-
         private bool UserNameExists(string username)
         {
             return _context.Users.Any(e => e.Username == username);

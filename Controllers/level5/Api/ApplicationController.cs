@@ -17,10 +17,7 @@ namespace level5Server.Controllers
     public class ApplicationController : ControllerBase
     {
         private readonly Level5Context _context;
-        private static readonly string[] Summaries = new[]
-{
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
+
         public ApplicationController(Level5Context context)
         {
             _context = context;
@@ -36,7 +33,6 @@ namespace level5Server.Controllers
         {
             return await _context.Application.OrderByDescending(x => x.Id)
                 .ToListAsync();
-            //return Summaries;
         }
 
         //--------------------- HTTP GET ---------------------------------------------------
@@ -71,8 +67,6 @@ namespace level5Server.Controllers
         [HttpPost]
         public async Task<ActionResult<Application>> PostHighscore(Application application)
         {
-            //_context.Users.Where(e => e.Userid == highscores.Userid).Any();
-            // if empty username  or userid NOT in user table
             if (string.IsNullOrEmpty(application.CurrentVersion)
                 || _context.Application.Where(e => e.CurrentVersion == application.CurrentVersion).Any())
             {
@@ -86,26 +80,6 @@ namespace level5Server.Controllers
                 return CreatedAtAction(nameof(GetAllVersionsAsync), new { id = application.Id }, application);
             }
         }
-
-        ////--------------------- HTTP GET  Modeid by Modeid ---------------------------------------------------
-        //// GET: /api/highscores/modeid/{modeid}?hardcore={int}&traffic={int}&enemies={int}
-        //// highscores by modeid with optiona; filters by hardcore, traffic, enemies
-        //[HttpGet("modeid/count/{modeid}")]
-        //public ActionResult<object> GetHighScoreCountByModeId(int modeid,
-        //    int hardcore,
-        //    int traffic,
-        //    int enemies)
-        //{
-        //    var count = _context.Highscores
-        //        .Where(x => x.Modeid == modeid
-        //        && x.HardcoreEnabled == hardcore
-        //        && x.TrafficEnabled == traffic
-        //        && x.EnemiesEnabled == enemies)
-        //        .Select(x => x.Id)
-        //        .Count();
-
-        //    return count;
-        //}
     }
 }
 

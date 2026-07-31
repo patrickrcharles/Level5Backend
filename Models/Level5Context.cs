@@ -185,7 +185,7 @@ public partial class Level5Context : DbContext
             // Id is an auto-increment identity column (see ValueGeneratedOnAdd below) - it was
             // scaffolded as a keyless entity only because the original MySQL table had a unique
             // index instead of an explicit PRIMARY KEY constraint. Without a real key, EF Core's
-            // change tracker can't track/insert instances (ServerStatsController.getServerStats
+            // change tracker can't track/insert instances (ServerStatsService.RecomputeAsync
             // relies on being able to Add() new rows), so this needs to be a proper key.
             entity.HasKey(e => e.Id);
 

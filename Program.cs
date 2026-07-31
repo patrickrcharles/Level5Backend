@@ -1,4 +1,5 @@
 using Level5Backend.Models;
+using Level5Backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -49,10 +50,10 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<Level5Context>(options =>
 options.UseNpgsql(_connectionString));
 
-builder.Services.AddCors(options => options.AddPolicy("ApiCorsPolicy", builder =>
-{
-    builder.WithOrigins("http://localhost:5173").AllowAnyMethod().AllowAnyHeader();
-}));
+// Recomputes ServerStats periodically off the request path (see Services/ServerStatsService.cs) -
+// this used to run synchronously inline on every highscore POST.
+builder.Services.AddScoped<IServerStatsService, ServerStatsService>();
+builder.Services.AddHostedService<ServerStatsBackgroundService>();
 
 // TokenController issues JWTs signed with Jwt:Key/Issuer/Audience; without registering a matching
 // authentication scheme here, every [Authorize]-protected endpoint 500s instead of 401ing, since

@@ -53,10 +53,10 @@ namespace level5Server.Controllers.level5.Api
                     new Claim("Userid",user.Userid.ToString()),
                     // gates the "RequireDev" authorization policy used by the remaining admin-only endpoints
                     new Claim("IsDev", (user.Isdev == 1).ToString().ToLowerInvariant()),
-                    new Claim("Firstname", user.Firstname.ToString()),
-                    new Claim("Lastname", user.Lastname.ToString()),
-                    new Claim("username", user.Username.ToString()),
-                    new Claim( "email", user.Email.ToString())
+                    new Claim("Firstname", user.Firstname ?? string.Empty),
+                    new Claim("Lastname", user.Lastname ?? string.Empty),
+                    new Claim("username", user.Username),
+                    new Claim( "email", user.Email)
                    };
 
                     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
