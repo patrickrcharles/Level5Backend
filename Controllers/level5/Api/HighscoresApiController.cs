@@ -382,17 +382,33 @@ namespace level5Server.Models.level5.Api
                 return Forbid();
             }
 
+            // The route/lookup key is scoreid, not Id - the client is never asked to know or send
+            // the server-assigned numeric Id, so highscores.Id here is always the default (0).
+            // Setting EntityState.Modified directly on it would generate "UPDATE ... WHERE id = 0",
+            // which matches no row and throws DbUpdateConcurrencyException on every single call.
+            // Loading the tracked row by scoreid first and copying values onto it (which carries the
+            // real Id) is what makes the update actually target the right row.
+            var existing = await _context.Highscores.FirstOrDefaultAsync(h => h.Scoreid == scoreid);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
             // server-derived, never trust whatever the client put in the request body - same as
             // PostHighscore/PostUnSubmittedHighscore, this was previously only enforced on create,
             // so a PUT could still overwrite it with an arbitrary client-supplied value
             highscores.Ipaddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
-            // If the client's PUT body omits modeName (not every caller round-trips every field),
-            // this backfills it from Modeid instead of silently overwriting the existing value
-            // with null - EntityState.Modified below writes every property as-is.
+            // If the client's PUT body omits modeName/sniperModeName/difficulty (not every caller
+            // round-trips every field), this backfills them instead of overwriting the existing
+            // value with null/0 - SetValues below writes every property as given.
             applyHighscoreDefaults(highscores);
 
-            _context.Entry(highscores).State = EntityState.Modified;
+            // Id is part of the key, so SetValues refuses to touch it if the source and target
+            // disagree - highscores.Id is always 0 (the client never sends it), so it has to be
+            // aligned with the real Id before copying the rest of the properties across.
+            highscores.Id = existing.Id;
+            _context.Entry(existing).CurrentValues.SetValues(highscores);
 
             try
             {
@@ -400,6 +416,7 @@ namespace level5Server.Models.level5.Api
             }
             catch (DbUpdateConcurrencyException)
             {
+                // A genuine race - existing was deleted between the lookup above and SaveChanges.
                 if (!ScoreIdExists(scoreid))
                 {
                     return NotFound();
@@ -670,10 +687,11 @@ namespace level5Server.Models.level5.Api
                     }
                 }
                 // No SaveChanges here - every call site persists this via its own SaveChangesAsync()
-                // right after (Add() for the POST endpoints, EntityState.Modified for PutHighscore),
-                // so a SaveChanges call in here would either do nothing yet (POST) or be redundant
-                // (PUT). It used to run once per loop iteration in PostUnSubmittedHighscore, which
-                // meant a sync, blocking round-trip that flushed previously-added-but-unsaved rows
+                // right after (Add() for the POST endpoints, CurrentValues.SetValues() for
+                // PutHighscore), so a SaveChanges call in here would either do nothing yet (POST) or
+                // be redundant (PUT). It used to run once per loop iteration in
+                // PostUnSubmittedHighscore, which meant a sync, blocking round-trip that flushed
+                // previously-added-but-unsaved rows
                 // early - the batch's single SaveChangesAsync() after the loop is enough.
             }
 
