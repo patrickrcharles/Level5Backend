@@ -39,10 +39,7 @@ builder.Services.AddCors(options =>
                       });
 });
 
-// AddControllers() alone only registers API (non-view) support; ChangeLog/Builds/Info/Links
-// call View(...), which needs the full MVC view pipeline (including TempData) that only
-// AddControllersWithViews() registers.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
