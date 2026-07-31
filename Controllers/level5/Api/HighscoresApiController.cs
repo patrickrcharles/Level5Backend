@@ -364,7 +364,9 @@ namespace level5Server.Models.level5.Api
         //--------------------- HTTP PUT ---------------------------------------------------
         // PUT: api/Highscores/scoreid/5
         /// <summary>
-        /// Insert high score or replace if already exists
+        /// Replace an existing high score's data. Despite the name, this does not insert - a
+        /// scoreid that doesn't already exist returns 404 (see the DbUpdateConcurrencyException
+        /// handling below).
         /// </summary>
         [Authorize]
         [HttpPut("scoreid/{scoreid}")]
@@ -379,6 +381,16 @@ namespace level5Server.Models.level5.Api
             {
                 return Forbid();
             }
+
+            // server-derived, never trust whatever the client put in the request body - same as
+            // PostHighscore/PostUnSubmittedHighscore, this was previously only enforced on create,
+            // so a PUT could still overwrite it with an arbitrary client-supplied value
+            highscores.Ipaddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            // If the client's PUT body omits modeName (not every caller round-trips every field),
+            // this backfills it from Modeid instead of silently overwriting the existing value
+            // with null - EntityState.Modified below writes every property as-is.
+            updateModeName(highscores);
 
             _context.Entry(highscores).State = EntityState.Modified;
 
@@ -657,11 +669,12 @@ namespace level5Server.Models.level5.Api
                             break;
                     }
                 }
-                // No SaveChanges here - this always runs before the highscore is Add()-ed to the
-                // context (see call sites), so it never persists anything for this row. In
-                // PostUnSubmittedHighscore it used to run once per loop iteration, which meant a
-                // sync, blocking round-trip that flushed previously-added-but-unsaved rows early -
-                // the batch's single SaveChangesAsync() after the loop is enough.
+                // No SaveChanges here - every call site persists this via its own SaveChangesAsync()
+                // right after (Add() for the POST endpoints, EntityState.Modified for PutHighscore),
+                // so a SaveChanges call in here would either do nothing yet (POST) or be redundant
+                // (PUT). It used to run once per loop iteration in PostUnSubmittedHighscore, which
+                // meant a sync, blocking round-trip that flushed previously-added-but-unsaved rows
+                // early - the batch's single SaveChangesAsync() after the loop is enough.
             }
         }
 

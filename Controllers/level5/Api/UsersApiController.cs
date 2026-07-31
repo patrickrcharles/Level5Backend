@@ -160,7 +160,7 @@ namespace level5Server.Models.level5
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(UserRegisterDto dto)
         {
-            if (UserNameExists(dto.Username))
+            if (await UserNameExistsAsync(dto.Username))
             {
                 return BadRequest();
             }
@@ -177,7 +177,22 @@ namespace level5Server.Models.level5
             };
 
             _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // The UserNameExistsAsync check above is inherently racy (check-then-insert, no
+                // transaction) - two concurrent signups for the same username can both pass it and
+                // then collide on the DB's unique index. Without this, the loser gets an unhandled
+                // 500 instead of the same response a non-racing duplicate signup already gets above.
+                if (await UserNameExistsAsync(dto.Username))
+                {
+                    return BadRequest();
+                }
+                throw;
+            }
 
             HideUserDetails(user);
             return CreatedAtAction(nameof(GetUserById), new { userid = user.Userid }, user);
@@ -210,9 +225,9 @@ namespace level5Server.Models.level5
         }
 
         //--------------------- UTILITY FUNCTIONS ---------------------------------------------------
-        private bool UserNameExists(string username)
+        private async Task<bool> UserNameExistsAsync(string username)
         {
-            return _context.Users.Any(e => e.Username == username);
+            return await _context.Users.AnyAsync(e => e.Username == username);
         }
 
         // the JWT issued by TokenController carries the authenticated user's id as a "Userid"
