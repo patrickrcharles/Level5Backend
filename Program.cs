@@ -106,8 +106,21 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 // First so it can catch exceptions thrown by everything downstream, including other middleware.
 app.UseExceptionHandler();
-app.UseSwagger();
-app.UseSwaggerUI();
+
+if (app.Environment.IsDevelopment())
+{
+    // Full schema/route disclosure - fine for local dev, not for anyone who can reach a
+    // production deployment.
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+else
+{
+    // Tells browsers to only ever talk to this host over HTTPS, even if a link/bookmark points at
+    // plain http:// - skipped in dev since local HTTPS certs are often self-signed/untrusted.
+    app.UseHsts();
+}
+
 app.UseCors(MyAllowSpecificOrigins);
 app.UseHttpsRedirection();
 app.UseAuthentication();

@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Cors;
 namespace level5Server.Controllers.level5.Api
 {
     [EnableCors("ApiCors")]
-    //[ApiVersion("1")]
     [ApiExplorerSettings(IgnoreApi = true)]
     [Route("api/userreport")]
     [ApiController]
@@ -57,7 +56,7 @@ namespace level5Server.Controllers.level5.Api
                 return BadRequest();
             }
             // text exists
-            if (await ReportTextExistsAsync(userReport.Report))
+            if (await ReportTextExistsAsync(userReport.Userid, userReport.Report))
             {
                 return Conflict();
             }
@@ -77,9 +76,12 @@ namespace level5Server.Controllers.level5.Api
             }
         }
 
-        private async Task<bool> ReportTextExistsAsync(string report)
+        // Scoped per-user rather than globally - two different users legitimately submitting the
+        // same report text (e.g. "crashes on level 3") shouldn't conflict with each other; this is
+        // meant to catch one user re-submitting (a broken retry, or spam), not coincidental phrasing.
+        private async Task<bool> ReportTextExistsAsync(int userid, string report)
         {
-            return await _context.UserReports.AnyAsync(e => e.Report == report);
+            return await _context.UserReports.AnyAsync(e => e.Userid == userid && e.Report == report);
         }
     }
 }
