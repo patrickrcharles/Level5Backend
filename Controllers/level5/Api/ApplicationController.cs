@@ -65,10 +65,10 @@ namespace level5Server.Controllers
         [Route("version")]
         [ApiExplorerSettings(IgnoreApi = true)]
         [HttpPost]
-        public async Task<ActionResult<Application>> PostHighscore(Application application)
+        public async Task<ActionResult<Application>> PostApplicationVersion(Application application)
         {
             if (string.IsNullOrEmpty(application.CurrentVersion)
-                || _context.Application.Where(e => e.CurrentVersion == application.CurrentVersion).Any())
+                || await _context.Application.AnyAsync(e => e.CurrentVersion == application.CurrentVersion))
             {
                 return BadRequest();
             }

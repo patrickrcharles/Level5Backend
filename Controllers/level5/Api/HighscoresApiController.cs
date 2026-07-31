@@ -548,34 +548,30 @@ namespace level5Server.Models.level5.Api
         /// Get # high scores for game mode by mode id with optional filters
         /// </summary>
         [HttpGet("modeid/count/{modeid}")]
-        public ActionResult<object> GetHighScoreCountByModeId(int modeid,
+        public async Task<ActionResult<object>> GetHighScoreCountByModeId(int modeid,
             int hardcore,
             int traffic,
             int sniper,
             int enemies)
         {
-            var count = _context.Highscores
+            var count = await _context.Highscores
                 .Where(x => x.Modeid == modeid
                 && x.HardcoreEnabled == hardcore
                 && x.TrafficEnabled == traffic
                 && x.SniperEnabled == sniper
                 && x.EnemiesEnabled == enemies)
                 .Select(x => x.Id)
-                .Count();
+                .CountAsync();
 
             return count;
         }
 
         private void updateModeName(Highscore highscores)
         {
-            System.Diagnostics.Debug.WriteLine("upDateModeName()");
-            //foreach (Highscores h in highscores)
-
             // if modename is null, insert based on modeid
             if (String.IsNullOrEmpty(highscores.ModeName))
             {
                 {
-                    //System.Diagnostics.Debug.WriteLine("highscores.Modeid : " + highscores.Modeid);
                     switch (highscores.Modeid)
                     {
                         case 1:
@@ -660,7 +656,6 @@ namespace level5Server.Models.level5.Api
                             highscores.ModeName = "none";
                             break;
                     }
-                    System.Diagnostics.Debug.WriteLine("highscores.ModeName : " + highscores.ModeName);
                 }
                 // No SaveChanges here - this always runs before the highscore is Add()-ed to the
                 // context (see call sites), so it never persists anything for this row. In

@@ -28,13 +28,20 @@ namespace level5Server.Models.level5
         // GET: /api/highscores
         // get all users
         /// <summary>
-        /// Get all users in database
+        /// Get all users in database, paginated (defaults to the first 50, capped at 200 per page).
         /// </summary>
         [Authorize]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetAllUsers()
+        public async Task<ActionResult<IEnumerable<User>>> GetAllUsers(int page = 0, int results = 50)
         {
-            var users = await _context.Users.AsNoTracking().ToListAsync();
+            int take = Math.Clamp(results, 1, 200);
+            int skip = Math.Max(page, 0) * take;
+
+            var users = await _context.Users.AsNoTracking()
+                .OrderBy(u => u.Userid)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
             foreach (User u in users)
             {
                 HideUserDetails(u);

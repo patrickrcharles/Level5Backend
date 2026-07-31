@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Level5Backend.Models;
 using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace level5Server.Controllers.level5.Api
 {
@@ -33,6 +34,7 @@ namespace level5Server.Controllers.level5.Api
         /// <summary>
         /// Get bearer token for in game game log in and high score post
         /// </summary>
+        [EnableRateLimiting("LoginPolicy")]
         [HttpPost]
         public async Task<ActionResult> Post(User _userData)
         {
@@ -44,7 +46,7 @@ namespace level5Server.Controllers.level5.Api
                 {
                     //create claims details based on the user information
                     var claims = new[] {
-                    new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"]),
+                    new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"] ?? string.Empty),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     // "iat" is a registered NumericDate claim (RFC 7519) - it must be serialized as a
                     // JSON number, not the human-readable date string this used to produce, or newer
@@ -59,7 +61,8 @@ namespace level5Server.Controllers.level5.Api
                     new Claim( "email", user.Email)
                    };
 
-                    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+                    // Jwt:Key is validated non-empty at startup (see Program.cs), so it's never null here.
+                    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
 
                     var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

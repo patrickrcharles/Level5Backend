@@ -20,23 +20,32 @@ namespace level5Server.Controllers.level5.Api
     public class UserReportApiController : Controller
     {
         private readonly Level5Context _context;
+        private readonly ILogger<UserReportApiController> _logger;
 
-        public UserReportApiController(Level5Context context)
+        public UserReportApiController(Level5Context context, ILogger<UserReportApiController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         //--------------------- HTTP GET ---------------------------------------------------
         // GET: /api/highscores
         // get all users
         /// <summary>
-        /// Get all users in database
+        /// Get all user reports, paginated (defaults to the first 50, capped at 200 per page).
         /// </summary>
         [Authorize(Policy = "RequireDev")]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserReport>>> GetAllReports()
+        public async Task<ActionResult<IEnumerable<UserReport>>> GetAllReports(int page = 0, int results = 50)
         {
-            return await _context.UserReports.ToListAsync();
+            int take = Math.Clamp(results, 1, 200);
+            int skip = Math.Max(page, 0) * take;
+
+            return await _context.UserReports
+                .OrderByDescending(r => r.Id)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync();
         }
 
         [HttpPost]
@@ -48,13 +57,12 @@ namespace level5Server.Controllers.level5.Api
                 return BadRequest();
             }
             // text exists
-            if (ReportTextExists(userReport.Report))
+            if (await ReportTextExistsAsync(userReport.Report))
             {
                 return Conflict();
             }
 
             userReport.Date = DateTime.UtcNow;
-            //System.Diagnostics.Debug.WriteLine("userReport.Date : "+ userReport.Date);
             try
             {
                 _context.UserReports.Add(userReport);
@@ -64,14 +72,14 @@ namespace level5Server.Controllers.level5.Api
             }
             catch (DbUpdateConcurrencyException e)
             {
-                System.Diagnostics.Debug.WriteLine("----- SERVER : DbUpdateConcurrencyException : " + e);
+                _logger.LogWarning(e, "Failed to save user report due to a concurrency conflict");
                 return BadRequest();
             }
         }
 
-        private bool ReportTextExists(string report)
+        private async Task<bool> ReportTextExistsAsync(string report)
         {
-            return _context.UserReports.Where(e => e.Report.Equals(report)).Any();
+            return await _context.UserReports.AnyAsync(e => e.Report == report);
         }
     }
 }

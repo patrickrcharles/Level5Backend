@@ -68,6 +68,11 @@ public partial class Level5Context : DbContext
 
             entity.HasIndex(e => e.Scoreid).IsUnique();
 
+            // Every leaderboard read in HighscoresApiController filters by Modeid (often plus
+            // Userid) - without this, those queries were full table scans on the busiest table
+            // in the schema. Composite index also covers Modeid-only filters (leftmost prefix).
+            entity.HasIndex(e => new { e.Modeid, e.Userid });
+
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.BonusPoints).HasColumnName("bonusPoints");
             entity.Property(e => e.Character)
