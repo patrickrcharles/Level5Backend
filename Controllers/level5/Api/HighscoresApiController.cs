@@ -662,7 +662,11 @@ namespace level5Server.Models.level5.Api
                     }
                     System.Diagnostics.Debug.WriteLine("highscores.ModeName : " + highscores.ModeName);
                 }
-                _context.SaveChanges();
+                // No SaveChanges here - this always runs before the highscore is Add()-ed to the
+                // context (see call sites), so it never persists anything for this row. In
+                // PostUnSubmittedHighscore it used to run once per loop iteration, which meant a
+                // sync, blocking round-trip that flushed previously-added-but-unsaved rows early -
+                // the batch's single SaveChangesAsync() after the loop is enough.
             }
         }
 
