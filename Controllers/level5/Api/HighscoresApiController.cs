@@ -676,6 +676,13 @@ namespace level5Server.Models.level5.Api
                 // meant a sync, blocking round-trip that flushed previously-added-but-unsaved rows
                 // early - the batch's single SaveChangesAsync() after the loop is enough.
             }
+
+            // Same idea as ModeName above: fall back to the DB column's own default instead of
+            // requiring every client to send this explicitly.
+            if (String.IsNullOrEmpty(highscores.SniperModeName))
+            {
+                highscores.SniperModeName = "none";
+            }
         }
 
         private static void HideHighScoreDetails(List<Highscore> highscores)

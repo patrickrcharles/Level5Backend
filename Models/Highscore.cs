@@ -72,8 +72,12 @@ public partial class Highscore
 
     public int SniperMode { get; set; }
 
-    [Required, StringLength(45)]
-    public string SniperModeName { get; set; } = null!;
+    // Nullable, not [Required] - the DB column defaults this to 'none' (see Level5Context), which
+    // only ever takes effect if EF is told to omit the value entirely; a non-nullable/required C#
+    // property meant no client could submit a score without explicitly sending this. updateModeName
+    // below now backfills it the same way it already does for ModeName.
+    [StringLength(45)]
+    public string? SniperModeName { get; set; }
 
     public int SniperHits { get; set; }
 
