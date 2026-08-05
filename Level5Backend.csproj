@@ -6,6 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>5f7b5e11-c385-42c7-b6bc-6e4ea23bbf6b</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <!-- Level5Backend.Tests lives in a subdirectory of this project. DefaultItemExcludes (unlike a
+         one-off <Compile Remove>) excludes it from every implicit SDK glob - Compile, Content, and
+         None alike - which matters here because the Web SDK's implicit Content/None globs were
+         picking up the test project's own bin/obj output and copying it into this project's output
+         directory, which on a second build copied that copy right back in, and so on: a
+         self-compounding nested bin-in-bin-in-bin blowup that was still growing when caught. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);Level5Backend.Tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
